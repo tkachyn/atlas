@@ -131,6 +131,7 @@ func (s *Store) Snapshot() []SnapshotEntry {
 
 	snapshot := make([]SnapshotEntry, 0, len(s.entries))
 	for key, item := range s.entries {
+		// remove expired entries so compaction does not persist dead data
 		if s.expired(key, item) {
 			continue
 		}

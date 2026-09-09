@@ -87,6 +87,7 @@ func runClient(addr, commandName string, requests int) result {
 	}
 	defer conn.Close()
 
+	// bound the session so a stalled server cannot hang the benchmark
 	if err := conn.SetDeadline(time.Now().Add(clientTimeout)); err != nil {
 		return result{errors: int64(requests)}
 	}

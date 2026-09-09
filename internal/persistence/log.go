@@ -76,6 +76,7 @@ func (l *Log) Replay(data *store.Store) error {
 	for offset < len(contents) {
 		relativeEnd := bytes.IndexByte(contents[offset:], '\n')
 		if relativeEnd < 0 {
+			// discard only the incomplete final record after an interrupted write
 			if err := l.truncateLocked(int64(offset)); err != nil {
 				return fmt.Errorf("truncate partial record: %w", err)
 			}
@@ -142,6 +143,7 @@ func (l *Log) Close() error {
 
 func (l *Log) appendLocked(cmd protocol.Command) error {
 	if cmd.Name == "EXPIRE" {
+		// store an absolute deadline so replay does not reset the key lifetime
 		seconds, err := strconv.ParseInt(cmd.Args[1], 10, 64)
 		if err != nil {
 			return fmt.Errorf("parse expiration: %w", err)
@@ -170,6 +172,7 @@ func (l *Log) compactLocked(data *store.Store) error {
 	}
 
 	snapshot := data.Snapshot()
+	// sort entries so equivalent compactions produce stable files
 	sort.Slice(snapshot, func(i, j int) bool {
 		return snapshot[i].Key < snapshot[j].Key
 	})
@@ -237,6 +240,7 @@ func encodeRecord(cmd protocol.Command) string {
 func decodeRecord(line string) (protocol.Command, error) {
 	payload := strings.TrimSuffix(line, "\n")
 	if !strings.HasPrefix(payload, recordVersion+"|") {
+		// accept legacy plain-text records during recovery
 		return protocol.Parse(payload)
 	}
 

@@ -69,6 +69,7 @@ func (s *Server) Run(ctx context.Context) error {
 	log.Printf("Atlas server starting...")
 	log.Printf("Listening on %s", listener.Addr())
 
+	// closing the listener unblocks accept when shutdown is requested
 	stopListener := make(chan struct{})
 	go func() {
 		select {
@@ -78,6 +79,7 @@ func (s *Server) Run(ctx context.Context) error {
 		}
 	}()
 
+	// handle clients independently so a slow connection cannot block new clients
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -97,6 +99,7 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 
 	close(stopListener)
+	// close clients before waiting so blocked read loops can finish
 	s.closeConnections()
 	s.clientWg.Wait()
 
@@ -166,6 +169,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 	}
 
 	reader := bufio.NewReader(conn)
+	// newline terminates requests in atlas's text protocol
 	for {
 		line, err := reader.ReadString('\n')
 		if len(line) > 0 {
@@ -201,6 +205,7 @@ func (s *Server) processRequest(line string) string {
 	}
 
 	if s.logFile != nil {
+		// persist before responding so successful commands have a durable record
 		if err := s.logFile.Append(cmd); err != nil {
 			return protocol.Error("persistence failure")
 		}
