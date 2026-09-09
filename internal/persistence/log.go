@@ -25,6 +25,7 @@ type Log struct {
 	mu   sync.Mutex
 	path string
 	file *os.File
+	size int64
 }
 
 // open creates or opens an append-only command log
@@ -40,7 +41,15 @@ func Open(path string) (*Log, error) {
 		return nil, fmt.Errorf("open persistence log: %w", err)
 	}
 
-	return &Log{path: path, file: file}, nil
+	info, err := file.Stat()
+	if err != nil {
+		if closeErr := file.Close(); closeErr != nil {
+			return nil, fmt.Errorf("stat persistence log: %v; close persistence log: %w", err, closeErr)
+		}
+		return nil, fmt.Errorf("stat persistence log: %w", err)
+	}
+
+	return &Log{path: path, file: file, size: info.Size()}, nil
 }
 
 // append writes a checksummed command to the log and flushes it to disk
@@ -97,6 +106,7 @@ func (l *Log) Replay(data *store.Store) error {
 	if _, err := l.file.Seek(0, io.SeekEnd); err != nil {
 		return fmt.Errorf("restore persistence position: %w", err)
 	}
+	l.size = int64(offset)
 
 	return nil
 }
@@ -118,11 +128,8 @@ func (l *Log) MaybeCompact(maxBytes int64, data *store.Store) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	info, err := l.file.Stat()
-	if err != nil {
-		return fmt.Errorf("stat persistence log: %w", err)
-	}
-	if info.Size() < maxBytes {
+	// use the tracked size to avoid a filesystem stat for every write
+	if l.size < maxBytes {
 		return nil
 	}
 
@@ -157,9 +164,11 @@ func (l *Log) appendLocked(cmd protocol.Command) error {
 		}
 	}
 
-	if _, err := l.file.WriteString(encodeRecord(cmd)); err != nil {
+	record := encodeRecord(cmd)
+	if _, err := l.file.WriteString(record); err != nil {
 		return fmt.Errorf("append command: %w", err)
 	}
+	l.size += int64(len(record))
 
 	return nil
 }
@@ -177,22 +186,27 @@ func (l *Log) compactLocked(data *store.Store) error {
 		return snapshot[i].Key < snapshot[j].Key
 	})
 
+	var compactedSize int64
 	for _, item := range snapshot {
-		if _, err := tempFile.WriteString(encodeRecord(protocol.Command{
+		record := encodeRecord(protocol.Command{
 			Name: "SET",
 			Args: []string{item.Key, item.Value},
-		})); err != nil {
+		})
+		if _, err := tempFile.WriteString(record); err != nil {
 			tempFile.Close()
 			return fmt.Errorf("write compacted value: %w", err)
 		}
+		compactedSize += int64(len(record))
 		if !item.ExpiresAt.IsZero() {
-			if _, err := tempFile.WriteString(encodeRecord(protocol.Command{
+			record := encodeRecord(protocol.Command{
 				Name: "EXPIREAT",
 				Args: []string{item.Key, strconv.FormatInt(item.ExpiresAt.UnixNano(), 10)},
-			})); err != nil {
+			})
+			if _, err := tempFile.WriteString(record); err != nil {
 				tempFile.Close()
 				return fmt.Errorf("write compacted expiration: %w", err)
 			}
+			compactedSize += int64(len(record))
 		}
 	}
 
@@ -217,6 +231,7 @@ func (l *Log) compactLocked(data *store.Store) error {
 	if err != nil {
 		return fmt.Errorf("reopen compacted log: %w", err)
 	}
+	l.size = compactedSize
 
 	return nil
 }
@@ -225,6 +240,7 @@ func (l *Log) truncateLocked(size int64) error {
 	if err := l.file.Truncate(size); err != nil {
 		return err
 	}
+	l.size = size
 	if err := l.file.Sync(); err != nil {
 		return err
 	}

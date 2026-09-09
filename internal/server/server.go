@@ -204,7 +204,8 @@ func (s *Server) processRequest(line string) string {
 		return protocol.Error(`unknown command "EXPIREAT"`)
 	}
 
-	if s.logFile != nil {
+	mutates := protocol.Mutates(cmd)
+	if s.logFile != nil && mutates {
 		// persist before responding so successful commands have a durable record
 		if err := s.logFile.Append(cmd); err != nil {
 			return protocol.Error("persistence failure")
@@ -212,7 +213,7 @@ func (s *Server) processRequest(line string) string {
 	}
 
 	response := command.Execute(cmd, s.data)
-	if s.logFile != nil {
+	if s.logFile != nil && mutates {
 		if err := s.logFile.MaybeCompact(s.maxLogBytes, s.data); err != nil {
 			log.Printf("persistence compaction error: %v", err)
 		}

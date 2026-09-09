@@ -93,24 +93,23 @@ func runClient(addr, commandName string, requests int) result {
 	}
 
 	reader := bufio.NewReader(conn)
-	if _, err := reader.ReadString('\n'); err != nil {
+	if err := discardLine(reader); err != nil {
 		return result{errors: int64(requests)}
+	}
+
+	request := []byte(commandName + " load-key\n")
+	if commandName == "SET" {
+		request = []byte("SET load-key value\n")
 	}
 
 	var output result
 	for i := 0; i < requests; i++ {
-		request := commandName + " load-key"
-		if commandName == "SET" {
-			request += " value"
-		}
-		request += "\n"
-
 		start := time.Now()
-		if _, err := conn.Write([]byte(request)); err != nil {
+		if _, err := conn.Write(request); err != nil {
 			output.errors++
 			continue
 		}
-		if _, err := reader.ReadString('\n'); err != nil {
+		if err := discardLine(reader); err != nil {
 			output.errors++
 			continue
 		}
@@ -134,7 +133,7 @@ func seed(addr string) error {
 	}
 
 	reader := bufio.NewReader(conn)
-	if _, err := reader.ReadString('\n'); err != nil {
+	if err := discardLine(reader); err != nil {
 		return err
 	}
 	if _, err := conn.Write([]byte("SET load-key value\n")); err != nil {
@@ -148,4 +147,16 @@ func seed(addr string) error {
 		return errors.New("unexpected SET response: " + response)
 	}
 	return nil
+}
+
+func discardLine(reader *bufio.Reader) error {
+	for {
+		_, isPrefix, err := reader.ReadLine()
+		if err != nil {
+			return err
+		}
+		if !isPrefix {
+			return nil
+		}
+	}
 }

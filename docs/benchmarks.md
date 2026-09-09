@@ -1,10 +1,10 @@
 # Benchmark notes
 
-These measurements were collected locally on September 5, 2026 with Go 1.27.0
+These measurements were collected locally on September 9, 2026 with Go 1.27.0
 on Windows.
 
-The server used `127.0.0.1:6391` and a local persistence file. The load
-generator used two concurrent clients and 200 total requests per command.
+The server ran locally with a local persistence file. The load generator used
+two concurrent clients and 200 total requests per command.
 
 ## Results
 
@@ -13,9 +13,9 @@ generator used two concurrent clients and 200 total requests per command.
 ```text
 requests: 200
 errors: 0
-duration: 342.3331ms
-throughput: 584.23 requests/sec
-average latency: 3.41297ms
+duration: 6.5031ms
+throughput: 30754.56 requests/sec
+average latency: 52.509µs
 ```
 
 ### `SET`
@@ -23,13 +23,14 @@ average latency: 3.41297ms
 ```text
 requests: 200
 errors: 0
-duration: 301.0779ms
-throughput: 664.28 requests/sec
-average latency: 2.986293ms
+duration: 345.352ms
+throughput: 579.12 requests/sec
+average latency: 3.405374ms
 ```
 
 The `GET` run seeds its key before measuring requests. The `SET` run includes
 the cost of appending and syncing each command to the local persistence file.
+Read-only commands are not written to the persistence log.
 
 These are basic local measurements, not production capacity claims. Results
 depend on hardware, operating system, persistence settings, client count, and

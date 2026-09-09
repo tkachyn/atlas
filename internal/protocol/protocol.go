@@ -61,3 +61,13 @@ func Error(message string) string {
 func Format(cmd Command) string {
 	return strings.Join(append([]string{cmd.Name}, cmd.Args...), " ")
 }
+
+// mutates reports whether a command changes stored state
+func Mutates(cmd Command) bool {
+	switch cmd.Name {
+	case "SET", "DEL", "EXPIRE", "EXPIREAT":
+		return true
+	default:
+		return false
+	}
+}

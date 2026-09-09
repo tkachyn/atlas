@@ -75,7 +75,8 @@ semantics.
 ## Persistence
 
 Atlas opens and replays its persistence file before accepting clients. A
-successful command is written and synced before Atlas sends its response.
+successful state-changing command is written and synced before Atlas sends its
+response.
 
 Legacy plain-text records remain readable. New records include a version marker
 and CRC32 checksum. An incomplete final record is truncated during recovery,

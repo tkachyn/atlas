@@ -24,11 +24,11 @@ For a request such as `SET name Alex`:
 1. The server reads a complete line from the TCP connection.
 2. The protocol package validates the command and its arguments.
 3. The command package applies the operation to the store.
-4. The persistence package records and syncs the command.
+4. The persistence package records and syncs state-changing commands.
 5. The server writes a newline-terminated response.
 
-The persistence record is written before the response is sent. This prevents
-Atlas from acknowledging a command that was not written to disk.
+The persistence record is written before a state-changing response is sent.
+This prevents Atlas from acknowledging a command that was not written to disk.
 
 ## Packages
 

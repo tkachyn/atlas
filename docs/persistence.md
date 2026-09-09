@@ -1,7 +1,7 @@
 # Persistence
 
-Atlas persists successful commands in an append-only file. The default path is
-`atlas.aof`, and the path can be changed with `-data-file`.
+Atlas persists successful state-changing commands in an append-only file. The
+default path is `atlas.aof`, and the path can be changed with `-data-file`.
 
 ## Startup recovery
 
