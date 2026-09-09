@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+const clientTimeout = 30 * time.Second
+
 type result struct {
 	requests int64
 	errors   int64
@@ -79,11 +81,15 @@ func main() {
 }
 
 func runClient(addr, commandName string, requests int) result {
-	conn, err := net.Dial("tcp", addr)
+	conn, err := net.DialTimeout("tcp", addr, 5*time.Second)
 	if err != nil {
 		return result{errors: int64(requests)}
 	}
 	defer conn.Close()
+
+	if err := conn.SetDeadline(time.Now().Add(clientTimeout)); err != nil {
+		return result{errors: int64(requests)}
+	}
 
 	reader := bufio.NewReader(conn)
 	if _, err := reader.ReadString('\n'); err != nil {
@@ -116,11 +122,15 @@ func runClient(addr, commandName string, requests int) result {
 }
 
 func seed(addr string) error {
-	conn, err := net.Dial("tcp", addr)
+	conn, err := net.DialTimeout("tcp", addr, 5*time.Second)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
+
+	if err := conn.SetDeadline(time.Now().Add(clientTimeout)); err != nil {
+		return err
+	}
 
 	reader := bufio.NewReader(conn)
 	if _, err := reader.ReadString('\n'); err != nil {

@@ -127,7 +127,9 @@ func (s *Server) closeListener() {
 	defer s.mu.Unlock()
 
 	if s.listener != nil {
-		_ = s.listener.Close()
+		if err := s.listener.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
+			log.Printf("close listener: %v", err)
+		}
 	}
 }
 
@@ -136,14 +138,20 @@ func (s *Server) closeConnections() {
 	defer s.mu.Unlock()
 
 	for conn := range s.clients {
-		_ = conn.Close()
+		if err := conn.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
+			log.Printf("close client connection: %v", err)
+		}
 	}
 }
 
 func (s *Server) handleConnection(conn net.Conn) {
 	defer s.clientWg.Done()
 	defer s.removeConnection(conn)
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
+			log.Printf("close client connection: %v", err)
+		}
+	}()
 
 	log.Printf("client connected: %s", conn.RemoteAddr())
 
@@ -187,6 +195,9 @@ func (s *Server) processRequest(line string) string {
 	cmd, err := protocol.Parse(line)
 	if err != nil {
 		return protocol.Error(err.Error())
+	}
+	if cmd.Name == "EXPIREAT" {
+		return protocol.Error(`unknown command "EXPIREAT"`)
 	}
 
 	if s.logFile != nil {

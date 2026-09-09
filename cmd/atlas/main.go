@@ -34,6 +34,9 @@ func main() {
 
 	if err := logFile.Replay(data); err != nil {
 		log.Printf("recovery error: %v", err)
+		if closeErr := logFile.Close(); closeErr != nil {
+			log.Printf("persistence close error: %v", closeErr)
+		}
 		os.Exit(1)
 	}
 

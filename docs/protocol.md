@@ -28,6 +28,9 @@ All three forms are interpreted as `GET name`.
 
 Keys and values cannot contain spaces. Quoting is not currently supported.
 
+`EXPIREAT` is reserved for persistence replay and is not part of the
+client-facing command set.
+
 ## Examples
 
 ### Set and retrieve a value
