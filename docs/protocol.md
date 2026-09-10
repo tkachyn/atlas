@@ -29,6 +29,8 @@ All three forms are interpreted as `GET name`.
 
 Keys and values cannot contain spaces. Quoting is not currently supported.
 
+Requests are limited to 64 KiB, including the command and its arguments.
+
 `EXPIREAT` is reserved for persistence replay and is not part of the
 client-facing command set.
 

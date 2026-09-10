@@ -16,6 +16,10 @@ import (
 	"github.com/tkachyn/atlas/internal/store"
 )
 
+const maxRequestBytes = 64 * 1024
+
+var errRequestTooLarge = errors.New("request exceeds maximum size")
+
 // server owns atlas's tcp listener and active client connections
 type Server struct {
 	addr        string
@@ -171,8 +175,8 @@ func (s *Server) handleConnection(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 	// newline terminates requests in atlas's text protocol
 	for {
-		line, err := reader.ReadString('\n')
-		if len(line) > 0 {
+		line, err := readRequest(reader)
+		if err == nil {
 			response := s.processRequest(line)
 			if _, writeErr := writer.WriteString(response); writeErr != nil {
 				log.Printf("write response to %s: %v", conn.RemoteAddr(), writeErr)
@@ -185,8 +189,17 @@ func (s *Server) handleConnection(conn net.Conn) {
 		}
 
 		if err != nil {
+			if errors.Is(err, errRequestTooLarge) {
+				if _, writeErr := writer.WriteString(protocol.Error(err.Error())); writeErr != nil {
+					log.Printf("write request error to %s: %v", conn.RemoteAddr(), writeErr)
+				} else if flushErr := writer.Flush(); flushErr != nil {
+					log.Printf("flush request error to %s: %v", conn.RemoteAddr(), flushErr)
+				}
+			}
 			if !errors.Is(err, io.EOF) && !errors.Is(err, net.ErrClosed) {
-				log.Printf("read from %s: %v", conn.RemoteAddr(), err)
+				if !errors.Is(err, errRequestTooLarge) {
+					log.Printf("read from %s: %v", conn.RemoteAddr(), err)
+				}
 			}
 			break
 		}
@@ -220,4 +233,25 @@ func (s *Server) processRequest(line string) string {
 	}
 
 	return response
+}
+
+func readRequest(reader *bufio.Reader) (string, error) {
+	var line []byte
+	for {
+		fragment, isPrefix, err := reader.ReadLine()
+		if len(line)+len(fragment) > maxRequestBytes {
+			return "", errRequestTooLarge
+		}
+		line = append(line, fragment...)
+
+		if err != nil {
+			if errors.Is(err, io.EOF) && len(line) > 0 {
+				return string(line), nil
+			}
+			return "", err
+		}
+		if !isPrefix {
+			return string(line), nil
+		}
+	}
 }

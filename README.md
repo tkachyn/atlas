@@ -67,7 +67,7 @@ DEL name
 ```
 
 Command names are case-insensitive. Keys and values cannot contain spaces in
-the current protocol.
+the current protocol. Requests are limited to 64 KiB.
 
 See [docs/protocol.md](docs/protocol.md) for command syntax and response
 semantics.
