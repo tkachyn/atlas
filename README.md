@@ -111,24 +111,32 @@ throughput, and average latency.
 Recorded local measurements are available in
 [docs/benchmarks.md](docs/benchmarks.md).
 
+## Project layout
+
+| Path | Purpose |
+| --- | --- |
+| `cmd/atlas` | Atlas server entry point |
+| `cmd/atlas-load` | Concurrent TCP load generator |
+| `internal/server` | TCP listener and client lifecycle |
+| `internal/protocol` | Request parsing and response formatting |
+| `internal/command` | Command execution and response generation |
+| `internal/store` | In-memory values and expiration state |
+| `internal/persistence` | Append-only logging and recovery |
+| `docs` | Protocol, architecture, persistence, and benchmark notes |
+
 ## Architecture
 
-```text
-TCP client
-    |
-server connection handler
-    |
-protocol parser
-    |
-command executor
-    |
-concurrent store
-    |
-append-only persistence log
-```
+| Layer | Responsibility |
+| --- | --- |
+| TCP transport | Accept connections and exchange bytes |
+| Server handler | Manage one client connection per goroutine |
+| Protocol parser | Convert request lines into validated commands |
+| Command executor | Apply commands and format responses |
+| In-memory store | Provide synchronized key-value access |
+| Persistence log | Record state changes and restore data on startup |
 
-See [docs/architecture.md](docs/architecture.md) for package responsibilities
-and request flow.
+See [docs/architecture.md](docs/architecture.md) for detailed package
+responsibilities and request flow.
 
 ## License
 
