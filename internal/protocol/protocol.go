@@ -23,6 +23,10 @@ func Parse(line string) (Command, error) {
 	args := fields[1:]
 
 	switch name {
+	case "PING":
+		if len(args) != 0 {
+			return Command{}, fmt.Errorf("PING does not accept arguments")
+		}
 	case "SET":
 		if len(args) != 2 {
 			return Command{}, fmt.Errorf("SET requires key and value")

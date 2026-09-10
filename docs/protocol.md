@@ -9,6 +9,7 @@ with a newline.
 
 | Command | Arguments | Description |
 | --- | --- | --- |
+| `PING` | none | Check that the server is responding |
 | `SET` | `key value` | Store a value |
 | `GET` | `key` | Return a value |
 | `DEL` | `key` | Delete a key |
@@ -32,6 +33,13 @@ Keys and values cannot contain spaces. Quoting is not currently supported.
 client-facing command set.
 
 ## Examples
+
+### Health check
+
+```text
+PING
+PONG
+```
 
 ### Set and retrieve a value
 

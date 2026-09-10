@@ -7,7 +7,7 @@ expiration, and append-only persistence.
 ## Features
 
 - TCP server with one goroutine per client
-- `SET`, `GET`, `DEL`, `EXISTS`, `EXPIRE`, and `TTL`
+- `PING`, `SET`, `GET`, `DEL`, `EXISTS`, `EXPIRE`, and `TTL`
 - Mutex-protected in-memory storage
 - Lazy key expiration
 - Append-only persistence with replay

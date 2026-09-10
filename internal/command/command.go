@@ -11,6 +11,8 @@ import (
 // execute applies a parsed command to the store and formats its response
 func Execute(cmd protocol.Command, data *store.Store) string {
 	switch cmd.Name {
+	case "PING":
+		return "PONG\n"
 	case "SET":
 		data.Set(cmd.Args[0], cmd.Args[1])
 		return "OK\n"
